@@ -1,0 +1,340 @@
+<?php
+
+/**
+ * Implements hook_entity_info().
+ */
+function micro_entity_info() {
+    $info = array();
+
+    
+    $info['micro'] = array(
+        'label' => t('página'),
+        'plural label' => t('Páginas'),
+        'base table' => 'micro',
+        'uri callback' => 'micro_uri',            
+        'entity keys' => array(
+            'id' => 'mid',
+            'label' => 'name', 
+            'language' => 'language',
+        ),
+        'module' => 'micro', 
+        'entity class' => 'Entity', 
+        'controller class' => 'EntityAPIController', 
+        'admin ui' => array(
+            'path' => 'admin/micro',
+            'controller class' => 'EntityDefaultUIController',
+        ),      
+        'access callback' => 'micro_access_callback',                
+        'fieldable' => TRUE,
+        'bundles' => array(
+          'micro' => array(
+            'label' => t('micro'),
+            'admin' => array(
+              'path' => 'admin/micro',
+            ),
+          ),
+        ),
+        'view modes' => array(
+          'full' => array(
+            'label' => t('Full content'),
+            'custom settings' => FALSE,
+          ),
+        ),
+        'translation' => array(            
+            'entity_translation' => array(
+                'class' => 'EntityTranslationDefaultHandler',
+                'default settings' => array(
+                    'default_language' => LANGUAGE_NONE,
+                    'hide_language_selector' => FALSE,
+                ),
+                'base path' => 'admin/micro/manage/%micro',
+                'path wildcard' => '%micro',
+                'access callback' => 'micro_entity_translation_tab_access'
+            ),
+        ),
+    );
+
+    return $info; 
+}
+function micro_uri($micro) {
+  return array(
+  'path' => 'micro/' . $micro->mid,
+  );
+}
+
+function micro_form($form, &$form_state, $micro = NULL) {
+
+    global $language ;
+    $langcode = $language->language ;
+
+
+    // get category options
+    $categories = category_list();
+    $options = array();
+    $cont = 1;
+
+    // builds the options
+    foreach($categories as $category) {
+      $children = taxonomy_get_children($category->tid);
+      if($children || $category->parent == 0) {
+        
+        if($children) {
+          foreach($children as $child) {
+            $options[$category->name][$child->tid] = $child->name;
+          }
+        }
+        else {
+          $options[$category->name] = array($category->tid => $category->name);
+        }
+      }
+    }
+
+    // fields
+    $form['name'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Name'),
+      '#weight' => -5,
+      '#required' => TRUE,
+      '#default_value' => isset($micro->name) ? $micro->name : null,
+    );
+    $form['category'] = array(
+      '#type' => 'select',
+      '#title' => t('Categoría'),
+      '#options' => $options,
+      '#default_value' => isset($micro->category) ? $micro->category : null,
+    );
+    $form['special_class'] = array(
+      '#type' => 'textfield',
+      '#description' => t('Digite transporte para incluir esta página en el tab de transporte'),
+      '#title' => t('Clase especial'),
+      '#default_value' => isset($micro->special_class) ? $micro->special_class : null,
+    );
+    $form['special_link'] = array(
+      '#type' => 'textfield',
+      '#description' => t('Digite un link si quiere que esta página sea direccionada a una URL externa.'),
+      '#title' => t('Enlace externo'),
+      '#default_value' => isset($micro->special_link) ? $micro->special_link : null,
+    );
+    $form['likes'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Incluir número de likes?'),
+      '#default_value' => isset($micro->likes) ? $micro->likes : null,
+    );
+    $form['social_fb'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Incluir ícono para compartir en Facebook?'),
+      '#default_value' => isset($micro->social_fb) ? $micro->social_fb : null,
+    );
+    $form['social_tw'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Incluir ícono para compartir en Twitter?'),
+      '#default_value' => isset($micro->social_tw) ? $micro->social_tw : null,
+    );
+    $form['share'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Incluir ícono para compartir en otras redes sociales?'),
+      '#default_value' => isset($micro->share) ? $micro->share : null,
+    );
+    $form['bookmarks'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Incluir ícono para agregar a favoritos?'),
+      '#default_value' => isset($micro->bookmarks) ? $micro->bookmarks : null,
+    );
+
+    $form['micro_lang'] = array(
+        '#type' => 'value',
+        '#value' => $langcode,
+      );  
+
+    
+    field_attach_form('micro', $micro, $form, $form_state, $langcode);
+    
+    $form['actions'] = array(
+        '#type' => 'actions',
+        'submit' => array(
+            '#type' => 'submit',
+            '#value' => isset($crpc->mid) ? t('Update') : t('Save'),
+        )
+    );  
+
+    return $form;
+}
+
+/**
+ * Submit handler for the add/edit form.
+ */
+function micro_form_submit($form, &$form_state) {
+    $entity = entity_ui_form_submit_build_entity($form, $form_state);
+    field_attach_presave('micro', $entity);
+    $entity->save();
+    drupal_set_message(t('La página: @name ha sido guardada.', array('@name' => $entity->name)));
+    $form_state['redirect'] = 'admin/micro';
+}
+
+function micro_permission() {
+    return array(
+        'administer micro' => array(
+            t('Administer micro module')
+        ),
+        'administer micro edit' => array(
+            t('Administer micro edit')
+        )          
+    );
+}
+
+/**
+ * Check access permissions for cr product compatibles
+ */
+function micro_access_callback($op, $entity = null, $account = null) {
+    if (user_access('administer micro', $account)) {
+        return true;
+    }
+    
+    return false;
+}
+
+/**
+ * Access callback: determines access to a product's translation tab.
+ */
+function micro_entity_translation_tab_access($entity) {
+  return entity_translation_tab_access('micro', $entity);
+}
+
+
+
+/**
+ * Loads a custom-entity by ID.
+ */
+function micro_load($entity_id) {
+  if (empty($entity_id)) {
+    return FALSE;
+  }
+
+  $entities = micro_load_multiple(array($entity_id), array());
+  return $entities ? reset($entities) : FALSE;
+}
+
+/**
+ * Loads multiple custom-entities by ID or based on a set of matching conditions.
+ *
+ */
+function micro_load_multiple($entity_ids = array(), $conditions = array(), $reset = FALSE) {
+  if (empty($entity_ids) && empty($conditions)) {
+    return array();
+  }
+
+  return entity_load('micro', $entity_ids, $conditions, $reset);
+}
+
+
+function micro_menu(){
+  $items['micro/%micro'] = array(
+    'page callback' => 'micro_page_view',
+    'page arguments' => array(1),
+    'access arguments' => array('view micro'),
+    'type' => MENU_CALLBACK,
+  );
+
+  $items['ajax-like/%'] = array(
+    'page callback' => 'ajax_like_add', // Render HTML
+    'page arguments' => array(1),
+    'type' => MENU_CALLBACK,
+    'access arguments' => array('access content'),
+    'delivery callback' => 'load_ajax_callback',  // Magic goes here
+  );
+
+  $items['ajax-like-blog/%'] = array(
+    'page callback' => 'ajax_like_add_blog', // Render HTML
+    'page arguments' => array(1),
+    'type' => MENU_CALLBACK,
+    'access arguments' => array('access content'),
+    'delivery callback' => 'load_ajax_callback',  // Magic goes here
+  );
+
+  return $items;
+}
+
+// function for add likes via ajax
+function ajax_like_add($mid) {
+  // updates num likes + 1
+  db_update('micro')
+    ->expression('num_likes', 'num_likes + 1')
+    ->condition('mid', $mid)
+    ->execute();
+
+  // takes num likes from an mid
+  $query = db_select('micro', 'm')
+    ->fields('m', array('num_likes'))
+    ->condition('mid', $mid)
+    ->addTag('node_access')
+    ->execute()
+    ->fetchAll(PDO::FETCH_ASSOC);
+
+  // get the value
+  $num_likes = $query[0]['num_likes'];
+
+  return $num_likes;
+}
+
+// function for add likes via ajax
+function ajax_like_add_blog($nid) {
+  // updates num likes + 1
+  db_update('field_data_field_num_likes')
+    ->expression('field_num_likes_value', 'field_num_likes_value + 1')
+    ->condition('entity_id', $nid)
+    ->execute();
+
+  // takes num likes from an mid
+  $query = db_select('field_data_field_num_likes', 'l')
+    ->fields('l', array('field_num_likes_value'))
+    ->condition('entity_id', $nid)
+    ->addTag('node_access')
+    ->execute()
+    ->fetchAll(PDO::FETCH_ASSOC);
+
+  // get the value
+  $num_likes = $query[0]['field_num_likes_value'];
+
+  return $num_likes;
+}
+
+function load_ajax_callback($likes) {
+  print '('.$likes.')';
+}
+
+function micro_page_view($micro, $view_mode = 'full') {
+  // Remove previously built content, if exists.
+  $micro->content = array();
+
+  global $language ;
+  $langcode = $language->language ;
+
+  module_invoke_all('entity_view', $micro, 'micro', $view_mode, $langcode);
+
+  // Build fields content.
+  field_attach_prepare_view('micro', array($micro->mid => $micro), $view_mode, $langcode);
+  entity_prepare_view('micro', array($micro->mid => $micro), $langcode);
+  $micro->content += field_attach_view('micro', $micro, $view_mode, $langcode);
+
+  return $micro->content;
+}
+
+/*** Helper functions *******/
+
+function category_list() {
+  $query = db_select('taxonomy_term_data', 't');
+  $query->join('taxonomy_term_hierarchy', 'h', 't.tid = h.tid');
+  $query->join('taxonomy_vocabulary', 'v', 't.vid = v.vid');
+  $result = $query
+  ->fields('t', array('tid', 'name'))
+  ->fields('h', array('parent'))
+  ->fields('v', array('machine_name'))
+  ->condition('machine_name', 'categoria')
+  ->addTag('node_access')
+  ->execute();
+  return $result;
+}
+
+
+
+?>

@@ -1,0 +1,93 @@
+<?php
+/*
+ * Creates the tables through schema API
+ */
+function micro_schema() {
+  $schema['micro'] = array (
+    'description' => 'The main store for micros',
+    'fields' => array(
+      'mid' => array(
+        'description' => 'Primary key for our table of micro sites',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'name' => array(
+        'description' => 'The actual name',
+        'type' => 'varchar',
+        'length' => '100',
+        'not null' => TRUE
+      ),
+      'category' => array(
+        'description' => 'TID category',
+        'type' => 'int',
+        'length' => '2',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'likes' => array(
+        'description' => 'Number of likes',
+        'type' => 'int',
+        'length' => '5',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'social_fb' => array(
+        'description' => 'If facebook icon is visible',
+        'type' => 'int',
+        'length' => '1',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'social_tw' => array(
+        'description' => 'If twitter icon is visible',
+        'type' => 'int',
+        'length' => '1',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'share' => array(
+        'description' => 'If share icon is visible',
+        'type' => 'int',
+        'length' => '1',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'bookmarks' => array(
+        'description' => 'If bookmarks icon is visible',
+        'type' => 'int',
+        'length' => '1',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'special_class' => array(
+        'description' => 'Special kind of class',
+        'type' => 'varchar',
+        'length' => '20',
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'special_link' => array(
+        'description' => 'Special kind of link',
+        'type' => 'varchar',
+        'length' => '100',
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'micro_lang' => array(
+        'type' => 'varchar',
+        'length' => 5,
+        'not null' => FALSE,
+      ),
+      'num_likes' => array(
+        'type' => 'int',
+        'length' => 5,
+        'not null' => FALSE,
+        'default' => 0,
+      ),     
+    ),
+    'primary key' => array('mid'),
+  );
+  
+  return $schema;
+}
